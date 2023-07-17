@@ -191,6 +191,7 @@ public enum ClassResolver {
 
     public void createBeans(Collection<Class<?>> targetClass) {
 
+        boolean lastEmpty = false;
         while (true) {
 
             int resolved = 0;
@@ -242,7 +243,13 @@ public enum ClassResolver {
 
 
             if (resolved == 0 || targetClass.size() == 0) {
-                break;
+                if (lastEmpty) {
+                    break;
+                } else {
+                    lastEmpty = true;
+                }
+            } else {
+                lastEmpty = false;
             }
         }
 
