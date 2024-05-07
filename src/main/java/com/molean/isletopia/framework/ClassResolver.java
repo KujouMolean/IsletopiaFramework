@@ -191,6 +191,7 @@ public enum ClassResolver {
 
     public void createBeans(Collection<Class<?>> targetClass) {
 
+        long nano = System.nanoTime();
         boolean lastEmpty = false;
         while (true) {
 
@@ -242,7 +243,7 @@ public enum ClassResolver {
             }
 
 
-            if (resolved == 0 || targetClass.size() == 0) {
+            if (resolved == 0 || targetClass.isEmpty()) {
                 if (lastEmpty) {
                     break;
                 } else {
@@ -261,7 +262,7 @@ public enum ClassResolver {
             }
         }
         Logger.getLogger("IsletopiaFramework").info("%d classes was constructed successfully!".formatted(objects.size()));
-
+        Logger.getLogger("IsletopiaFramework").info("%d ms was used.".formatted(nano / 1000000));
 
     }
 
@@ -330,10 +331,14 @@ public enum ClassResolver {
      * @throws Exception 异常
      */
     public void resolveBean() throws Exception {
+        Logger.getLogger("IsletopiaFramework").info("Starting create beans...");
         createBeans(getClassesShouldScan());
+        Logger.getLogger("IsletopiaFramework").info("%d resolving field injects...");
         resolveFieldsInject();
+        Logger.getLogger("IsletopiaFramework").info("%d applying annotation handlers...");
         applyAnnotationHandler();
         Set<IBeanHandler> beanHandlers = getBeanHandlers();
+        Logger.getLogger("IsletopiaFramework").info("%d apply bean handlers...");
         applyBeanHandler(beanHandlers);
     }
 
