@@ -333,12 +333,12 @@ public enum ClassResolver {
     public void resolveBean() throws Exception {
         Logger.getLogger("IsletopiaFramework").info("Starting create beans...");
         createBeans(getClassesShouldScan());
-        Logger.getLogger("IsletopiaFramework").info("%d resolving field injects...");
+        Logger.getLogger("IsletopiaFramework").info("Resolving field injects...");
         resolveFieldsInject();
-        Logger.getLogger("IsletopiaFramework").info("%d applying annotation handlers...");
+        Logger.getLogger("IsletopiaFramework").info("Applying annotation handlers...");
         applyAnnotationHandler();
         Set<IBeanHandler> beanHandlers = getBeanHandlers();
-        Logger.getLogger("IsletopiaFramework").info("%d apply bean handlers...");
+        Logger.getLogger("IsletopiaFramework").info("Apply bean handlers...");
         applyBeanHandler(beanHandlers);
     }
 
