@@ -262,7 +262,7 @@ public enum ClassResolver {
             }
         }
         Logger.getLogger("IsletopiaFramework").info("%d classes was constructed successfully!".formatted(objects.size()));
-        Logger.getLogger("IsletopiaFramework").info("%d ms was used.".formatted(nano / 1000000));
+        Logger.getLogger("IsletopiaFramework").info("%d ms was used.".formatted((System.nanoTime() - nano) / 1000000));
 
     }
 
