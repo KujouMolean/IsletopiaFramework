@@ -365,7 +365,7 @@ public enum ClassResolver {
                             set.add(aClass);
                             classSet.add(aClass);
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         e.printStackTrace();
                     }
                 }
