@@ -75,9 +75,21 @@ public enum ClassResolver {
      * @return 目标对象, 不存在则返回null
      */
     public Object getObject(Parameter parameter) {
-        Class<?> type = parameter.getType();
-        return getObject(type);
+        return getObjectFrom(parameter, objects);
     }
+
+    /**
+     * 从容器或指定容器获取对象
+     *
+     * @param parameter
+     * @param objects
+     * @return
+     */
+    public Object getObjectFrom(Parameter parameter, Collection<Object> objects) {
+        Class<?> type = parameter.getType();
+        return getObjectFrom(type, objects);
+    }
+
 
     /**
      * 从容器获取对象
@@ -86,8 +98,12 @@ public enum ClassResolver {
      * @return 目标对象, 不存在则返回null
      */
     public Object getObject(Field field) {
+        return getObjectFrom(field, objects);
+    }
+
+    public Object getObjectFrom(Field field, Collection<Object> objects) {
         Class<?> type = field.getType();
-        return getObject(type);
+        return getObjectFrom(type, objects);
     }
 
     /**
@@ -97,6 +113,10 @@ public enum ClassResolver {
      * @return 目标对象, 不存在则返回null
      */
     public <T> T getObject(Class<T> type) {
+        return getObjectFrom(type, objects);
+    }
+
+    public <T> T getObjectFrom(Class<T> type, Collection<Object> objects) {
         for (Object value : objects) {
             if (type.isInstance(value)) {
                 return (T) value;
@@ -145,13 +165,16 @@ public enum ClassResolver {
 
 
     @Nullable
-    public Object tryCreateClassByConstructor(Class<?> clazz) {
+    public Object tryCreateClassByConstructorWithObjects(Class<?> clazz, List<Object> objects) {
         Constructor<?>[] declaredConstructors = clazz.getDeclaredConstructors();
         constructor:
         for (Constructor<?> declaredConstructor : declaredConstructors) {
             ArrayList<Object> parameters = new ArrayList<>();
             for (Parameter parameter : declaredConstructor.getParameters()) {
-                Object object = getObject(parameter);
+                Object object = getObjectFrom(parameter, objects);
+                if (object == null) {
+                    object = getObject(parameter);
+                }
                 if (object != null) {
                     parameters.add(object);
                 } else {
@@ -170,6 +193,9 @@ public enum ClassResolver {
         return null;
     }
 
+    public Object tryCreateClassByConstructor(Class<?> clazz) {
+        return tryCreateClassByConstructorWithObjects(clazz, List.of());
+    }
 
     public Set<Class<?>> getClassesShouldScan() {
         Set<Class<?>> targetClass = new HashSet<>();
@@ -267,7 +293,7 @@ public enum ClassResolver {
     }
 
 
-    public Set<IBeanHandler> getBeanHandlers() {
+    public Collection<IBeanHandler> getBeanHandlers() {
         Set<IBeanHandler> beanHandlers = new HashSet<>();
         for (Object object : objects) {
             if (object instanceof IBeanHandler IBeanHandler) {
@@ -277,28 +303,7 @@ public enum ClassResolver {
 
         ArrayList<IBeanHandler> handlerArrayList = new ArrayList<>(beanHandlers);
         Logger.getLogger("IsletopiaFramework").info("%d bean handlers was constructed successfully!".formatted(handlerArrayList.size()));
-        return beanHandlers;
-    }
 
-    public void applyAnnotationHandler() {
-        for (Object object : objects) {
-            if (object instanceof IAnnotationHandler) {
-                IAnnotationHandler<Annotation> iAnnotationHandler = (IAnnotationHandler<Annotation>) object;
-                if (object.getClass().isAnnotationPresent(AnnotationHandler.class)) {
-                    Class<? extends Annotation> value = object.getClass().getAnnotation(AnnotationHandler.class).value();
-                    for (Class<?> aClass : classSet) {
-                        if (aClass.isAnnotationPresent(value)) {
-                            Annotation annotation = aClass.getAnnotation(value);
-                            iAnnotationHandler.handle(aClass, annotation);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public void applyBeanHandler(Set<IBeanHandler> beanHandlers) {
-        ArrayList<IBeanHandler> handlerArrayList = new ArrayList<>(beanHandlers);
         handlerArrayList.sort((o1, o2) -> {
             int p1 = 0;
             int p2 = 0;
@@ -312,17 +317,51 @@ public enum ClassResolver {
             return p2 - p1;
         });
 
+        return handlerArrayList;
+    }
 
-        for (IBeanHandler beanHandler : handlerArrayList) {
+    public void applyAnnotationHandler(Object object) {
+        if (object instanceof IAnnotationHandler) {
+            IAnnotationHandler<Annotation> iAnnotationHandler = (IAnnotationHandler<Annotation>) object;
+            if (object.getClass().isAnnotationPresent(AnnotationHandler.class)) {
+                Class<? extends Annotation> value = object.getClass().getAnnotation(AnnotationHandler.class).value();
+                for (Class<?> aClass : classSet) {
+                    if (aClass.isAnnotationPresent(value)) {
+                        Annotation annotation = aClass.getAnnotation(value);
+                        iAnnotationHandler.handle(aClass, annotation);
+                    }
+                }
+            }
+        }
+    }
+
+    public void applyAnnotationHandler() {
+        for (Object object : objects) {
+            applyAnnotationHandler(object);
+        }
+    }
+
+    public void applyBeanHandler(Object value) {
+        for (IBeanHandler beanHandler : getBeanHandlers()) {
+            try {
+                beanHandler.handle(value);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    public void applyBeanHandler() {
+        for (IBeanHandler beanHandler : getBeanHandlers()) {
             for (Object value : objects) {
                 try {
                     beanHandler.handle(value);
-                } catch (Throwable e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-
     }
 
     /**
@@ -337,9 +376,8 @@ public enum ClassResolver {
         resolveFieldsInject();
         Logger.getLogger("IsletopiaFramework").info("Applying annotation handlers...");
         applyAnnotationHandler();
-        Set<IBeanHandler> beanHandlers = getBeanHandlers();
         Logger.getLogger("IsletopiaFramework").info("Apply bean handlers...");
-        applyBeanHandler(beanHandlers);
+        applyBeanHandler();
     }
 
 
